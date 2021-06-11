@@ -30,4 +30,17 @@ app.get('/participants', (req,res) => {
     res.send(participants)
 })
 
+app.post('/messages', (req,res) => {
+    const message = req.body
+    const {to, text, type} = message
+    const from = req.header("User")
+
+    if(to && text && ["message", "private_message"].includes(type) && participants.find(({name}) => name === from)) {
+        messages.push({...message, from})
+        return res.sendStatus(200)
+    }
+
+    res.sendStatus(400)
+})
+
 app.listen(4000)
