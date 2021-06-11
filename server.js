@@ -61,7 +61,6 @@ app.post('/participants', (req,res) => {
     if(isValid.error) return res.sendStatus(422);
     
     const participant = cleanData(req.body);
-    console.log(participant)
 
     if(!participants.some(({name}) => name === participant.name)) {
         participants.push({name: participant.name, lastStatus: Date.now()})
@@ -104,13 +103,13 @@ app.post('/messages', (req,res) => {
 
 app.get('/messages', (req,res) => {
     const limit = req.query.limit
-    const user = req.header("User")
+    const user = req.headers
 
-    const messagesFiltered = messages.filter(element => element.type === "message" || element.type === "status" || element.to === user || element.from === user);
+    const messagesFiltered = messages.filter(element => (element.type === "private_message" && element.to === user) || element.type === "status" || element.to === user || element.from === user || element.to === "Todos");
 
-    limit
-    ? res.send(messages.slice(0, limit))
-    : res.send(messages)
+    req.query.limit
+    ? res.send(messagesFiltered.slice(-limit))
+    : res.send(messagesFiltered)
 })
 
 app.post('/status', (req,res) => {
