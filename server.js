@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dayjs from 'dayjs'
+import { stripHtml } from "string-strip-html";
 
 let participants = [];
 let messages = [];
@@ -13,13 +14,21 @@ var corsOptions = {
 }
 app.use(cors(corsOptions));
 
-app.post('/participants', (req,res) => {
-    const participant = req.body.name;
-    console.log(participant)
+function cleanData (body) {
+    const objArray = Object.entries(body)       //transformar numa matriz
+    const cleanArray = objArray.map(item => {   //percorrer a matriz com map 
+        const [key, value] = item               //destructuring da array
+        return [key, stripHtml(value.trim())]   //limpar a array criada executando stripHtml pra cada value do objeto inicial removendo os espaços em seguida
+    })
+    return Object.fromEntries(cleanArray)       //transforma a matriz em objeto de novo
+}
 
-    if(participant && !participants.some(({name}) => name === participant)) {
-        participants.push({name: participant, lastStatus: Date.now()})
-        messages.push({from: participant, to: 'Todos', text: 'entra na sala', type: 'status', time: dayjs().format('HH:mm:ss')})
+app.post('/participants', (req,res) => {
+    const { name } = cleanData(req.body);
+
+    if(name && !participants.some((item) => name === item.name)) {
+        participants.push({name: name, lastStatus: Date.now()})
+        messages.push({from: name, to: 'Todos', text: 'entra na sala', type: 'status', time: dayjs().format('HH:mm:ss')})
 
         return res.sendStatus(200)
     }
@@ -31,7 +40,8 @@ app.get('/participants', (req,res) => {
 })
 
 app.post('/messages', (req,res) => {
-    const message = req.body
+
+    const message = cleanData(req.body)
     const {to, text, type} = message
     const from = req.header("User")
 
