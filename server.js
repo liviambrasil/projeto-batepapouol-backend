@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dayjs from 'dayjs'
 import { stripHtml } from "string-strip-html";
+import joi from 'joi'
 
 let participants = [];
 let messages = [];
@@ -24,9 +25,17 @@ function cleanData (body) {
 }
 
 app.post('/participants', (req,res) => {
+
+    const schema = joi.object({
+        name: joi.string().required()
+    });
+    const isValid = schema.validate(req.body);
+
+    if(isValid.error) return res.sendStatus(422);
+    
     const { name } = cleanData(req.body);
 
-    if(name && !participants.some((item) => name === item.name)) {
+    if(!participants.some((item) => name === item.name)) {
         participants.push({name: name, lastStatus: Date.now()})
         messages.push({from: name, to: 'Todos', text: 'entra na sala', type: 'status', time: dayjs().format('HH:mm:ss')})
 
@@ -41,11 +50,21 @@ app.get('/participants', (req,res) => {
 
 app.post('/messages', (req,res) => {
 
+    const schema = joi.object({
+        to: joi.string().required(),
+        text: joi.string().required(),
+        type: joi.string().valid(["message", "private_message"]).required()
+    })
+
+    const isValid = schema.validate(req.body);
+
+    if(isValid.error) return res.sendStatus(422);
+
     const message = cleanData(req.body)
     const {to, text, type} = message
     const from = req.header("User")
 
-    if(to && text && ["message", "private_message"].includes(type) && participants.find(({name}) => name === from)) {
+    if(participants.find(({name}) => name === from)) {
         messages.push({...message, from})
         return res.sendStatus(200)
     }
