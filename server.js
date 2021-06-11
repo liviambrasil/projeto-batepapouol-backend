@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dayjs from 'dayjs'
 
-let participants = []; //{name: , lastStatus: }
+let participants = [];
 let messages = [];
 
 const app = express();
@@ -60,8 +60,20 @@ app.post('/status', (req,res) => {
     const participant = participants.find(({name}) => name === user)
 
         participant
-        ? (participant.lastStatus = Date.now() && res.sendStatus(200))
+        ? ((participant.lastStatus = Date.now()) && res.sendStatus(200))
         : res.sendStatus(400)
 })
+
+setInterval(() => {
+    participants = participants.filter(element => {
+        if (Date.now() - element.lastStatus < 10000) {
+            return true
+        }
+        else {
+            messages.push({from: element.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format('HH:mm:ss')})
+            return false
+        }    
+    })
+}, 15000)
 
 app.listen(4000)
