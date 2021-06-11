@@ -54,4 +54,14 @@ app.get('/messages', (req,res) => {
     : res.send(messagesFiltered)
 })
 
+app.post('/status', (req,res) => {
+    const user = req.header("User")
+
+    const participant = participants.find(({name}) => name === user)
+
+        participant
+        ? (participant.lastStatus = Date.now() && res.sendStatus(200))
+        : res.sendStatus(400)
+})
+
 app.listen(4000)
