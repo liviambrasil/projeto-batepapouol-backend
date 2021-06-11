@@ -43,4 +43,15 @@ app.post('/messages', (req,res) => {
     res.sendStatus(400)
 })
 
+app.get('/messages', (req,res) => {
+    const limit = req.query.limit
+    const user = req.header("User")
+
+    const messagesFiltered = messages.filter(element => element.type === "messages" || element.to === user || element.from === user);
+
+    limit
+    ? res.send(messagesFiltered.slice(0, limit))
+    : res.send(messagesFiltered)
+})
+
 app.listen(4000)
