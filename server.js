@@ -19,7 +19,7 @@ function cleanData (body) {
     const objArray = Object.entries(body)       //transformar numa matriz
     const cleanArray = objArray.map(item => {   //percorrer a matriz com map 
         const [key, value] = item               //destructuring da array
-        return [key, stripHtml(value.trim())]   //limpar a array criada executando stripHtml pra cada value do objeto inicial removendo os espaços em seguida
+        return [key, stripHtml(value).result.trim()]   //limpar a array criada executando stripHtml pra cada value do objeto inicial removendo os espaços em seguida
     })
     return Object.fromEntries(cleanArray)       //transforma a matriz em objeto de novo
 }
@@ -33,11 +33,12 @@ app.post('/participants', (req,res) => {
 
     if(isValid.error) return res.sendStatus(422);
     
-    const { name } = cleanData(req.body);
+    const participant = cleanData(req.body);
+    console.log(participant)
 
-    if(!participants.some((item) => name === item.name)) {
-        participants.push({name: name, lastStatus: Date.now()})
-        messages.push({from: name, to: 'Todos', text: 'entra na sala', type: 'status', time: dayjs().format('HH:mm:ss')})
+    if(!participants.some(({name}) => name === participant.name)) {
+        participants.push({name: participant.name, lastStatus: Date.now()})
+        messages.push({from: participant.name, to: 'Todos', text: 'entra na sala', type: 'status', time: dayjs().format('HH:mm:ss')})
 
         return res.sendStatus(200)
     }
@@ -53,7 +54,7 @@ app.post('/messages', (req,res) => {
     const schema = joi.object({
         to: joi.string().required(),
         text: joi.string().required(),
-        type: joi.string().valid(["message", "private_message"]).required()
+        type: joi.string().valid("message", "private_message").required()
     })
 
     const isValid = schema.validate(req.body);
@@ -84,6 +85,7 @@ app.get('/messages', (req,res) => {
 })
 
 app.post('/status', (req,res) => {
+    try{
     const user = req.header("User")
 
     const participant = participants.find(({name}) => name === user)
@@ -91,6 +93,10 @@ app.post('/status', (req,res) => {
         participant
         ? ((participant.lastStatus = Date.now()) && res.sendStatus(200))
         : res.sendStatus(400)
+}
+catch (e) {
+    console.log(e)
+}
 })
 
 setInterval(() => {
