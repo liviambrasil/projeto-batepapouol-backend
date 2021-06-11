@@ -103,13 +103,13 @@ app.post('/messages', (req,res) => {
 
 app.get('/messages', (req,res) => {
     const limit = req.query.limit
-    const user = req.headers
+    const user = req.header("User")
 
     const messagesFiltered = messages.filter(element => (element.type === "private_message" && element.to === user) || element.type === "status" || element.to === user || element.from === user || element.to === "Todos");
 
     req.query.limit
     ? res.send(messagesFiltered.slice(-limit))
-    : res.send(messagesFiltered)
+    : (res.send(messagesFiltered))
 })
 
 app.post('/status', (req,res) => {
