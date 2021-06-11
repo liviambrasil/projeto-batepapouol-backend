@@ -3,9 +3,11 @@ import cors from 'cors'
 import dayjs from 'dayjs'
 import { stripHtml } from "string-strip-html";
 import joi from 'joi'
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import path from 'path'
 
-let participants = [];
-let messages = [];
+let participants;
+let messages;
 
 const app = express();
 app.use(express.json());
@@ -14,6 +16,31 @@ var corsOptions = {
     origin: '*',
 }
 app.use(cors(corsOptions));
+
+
+if (existsSync('participants.json')) {
+    let savedParticipants = JSON.parse(readFileSync(path.resolve("participants.json")));
+    participants=savedParticipants;
+}
+else {
+    participants = [];
+}
+if (existsSync('messages.json')) {
+    let savedMessages = JSON.parse(readFileSync(path.resolve("messages.json")));
+    messages=savedMessages;
+}
+else {
+    messages = [];
+}
+
+function saveParticipants () {
+    writeFileSync('participants.json', JSON.stringify(participants))
+}
+
+function saveMessages () {
+    writeFileSync('messages.json', JSON.stringify(messages))
+}
+
 
 function cleanData (body) {
     const objArray = Object.entries(body)       //transformar numa matriz
@@ -39,7 +66,8 @@ app.post('/participants', (req,res) => {
     if(!participants.some(({name}) => name === participant.name)) {
         participants.push({name: participant.name, lastStatus: Date.now()})
         messages.push({from: participant.name, to: 'Todos', text: 'entra na sala', type: 'status', time: dayjs().format('HH:mm:ss')})
-
+        saveParticipants()
+        saveMessages()
         return res.sendStatus(200)
     }
     res.sendStatus(400)
@@ -66,7 +94,8 @@ app.post('/messages', (req,res) => {
     const from = req.header("User")
 
     if(participants.find(({name}) => name === from)) {
-        messages.push({...message, from})
+        messages.push({...message, from, time: dayjs().format('HH:mm:ss')})
+        saveMessages()
         return res.sendStatus(200)
     }
 
@@ -77,15 +106,14 @@ app.get('/messages', (req,res) => {
     const limit = req.query.limit
     const user = req.header("User")
 
-    const messagesFiltered = messages.filter(element => element.type === "messages" || element.to === user || element.from === user);
+    const messagesFiltered = messages.filter(element => element.type === "message" || element.type === "status" || element.to === user || element.from === user);
 
     limit
-    ? res.send(messagesFiltered.slice(0, limit))
-    : res.send(messagesFiltered)
+    ? res.send(messages.slice(0, limit))
+    : res.send(messages)
 })
 
 app.post('/status', (req,res) => {
-    try{
     const user = req.header("User")
 
     const participant = participants.find(({name}) => name === user)
@@ -93,15 +121,13 @@ app.post('/status', (req,res) => {
         participant
         ? ((participant.lastStatus = Date.now()) && res.sendStatus(200))
         : res.sendStatus(400)
-}
-catch (e) {
-    console.log(e)
-}
+
+    saveParticipants()
 })
 
 setInterval(() => {
     participants = participants.filter(element => {
-        if (Date.now() - element.lastStatus < 10000) {
+        if ((Date.now() - element.lastStatus) < 10000) {
             return true
         }
         else {
@@ -109,6 +135,8 @@ setInterval(() => {
             return false
         }    
     })
+    saveParticipants()
+    saveMessages()
 }, 15000)
 
 app.listen(4000)
