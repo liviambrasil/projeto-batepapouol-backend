@@ -26,4 +26,8 @@ app.post('/participants', (req,res) => {
     res.sendStatus(400)
 })
 
+app.get('/participants', (req,res) => {
+    res.send(participants)
+})
+
 app.listen(4000)
